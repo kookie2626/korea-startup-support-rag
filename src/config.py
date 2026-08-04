@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-@dataclass
+@dataclass(frozen=True)
 class Settings:
     openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-large")
