@@ -24,4 +24,4 @@ jobs:
         # incrementally. These rules catch syntax errors and undefined names.
         run: ruff check src tests app.py streamlit_app.py --select E9,F63,F7,F82
       - name: Test
-        run: pytest -q
+        run: PYTHONPATH=. pytest -q
