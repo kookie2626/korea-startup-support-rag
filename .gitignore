@@ -2,6 +2,9 @@
 __pycache__/
 *.py[cod]
 *.so
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Virtual environments
 .venv/
@@ -10,10 +13,10 @@ venv/
 # Environment files
 .env
 
-# Local data
+# Local documents, indexes, previews, and user query logs
 /data/raw/
 /data/vectorstore/
-/data/processed/chunks_preview.json
+/data/processed/
 
 # OS/editor
 .DS_Store
