@@ -1,25 +1,30 @@
 # 시스템 아키텍처
 
-## 1. 구성 요소
-- Ingestion Layer: PDF 로딩, 청크 분할, 메타데이터 부착
-- Index Layer: Chroma 벡터 DB 임베딩 저장
-- Retrieval Layer: BM25 + Vector Search 하이브리드 검색
-- Generation Layer: LangChain + LLM 응답 생성
-- Guardrail Layer: 출처 강제 표기(파일명/페이지), 컨텍스트 외 추론 금지
+## 검색 흐름
 
-## 2. 데이터 흐름
-1. Raw PDF 저장 (`data/raw`)
-2. 전처리 및 chunk 생성 (`src/data/pdf_preprocessor.py`)
-3. 임베딩 + Chroma 저장 (`src/ingest/build_index.py`)
-4. 질의 시 하이브리드 검색 (`src/retrieval/hybrid_retriever.py`)
-5. 검색 결과 기반 답변 + 출처 (`src/rag/qa_chain.py`)
+1. 질문에서 지역·단계·나이 추출
+2. UI의 기관·지역·지원분야 필터 정규화
+3. 조건과 일치하는 문서 후보 계산
+4. BM25와 벡터 검색 수행
+5. Reciprocal Rank Fusion으로 순위 결합
+6. 토큰 중첩 기반 경량 리랭킹
+7. 임계값 통과 문서만 LLM에 전달
+8. 문서 메타데이터에서 출처 목록 생성
 
-## 3. 환각 방지 설계
-- 시스템 프롬프트에 "컨텍스트 외 정보 금지" 명시
-- 답변 말미에 출처 강제 포맷 포함
-- 검색 실패 시 모름 응답 정책
+## 안전 정책
 
-## 4. 확장 포인트
-- Metadata Filtering: 지역/연령/업력 조건 사전 필터링
-- Reranker 도입: 교차 인코더 재순위화
-- Multi-Vector Retriever: 제목/표/본문 분리 임베딩
+- 조건 필터 결과가 없으면 필터를 자동 완화하지 않습니다.
+- 리랭커 통과 문서가 없으면 LLM 호출을 생략합니다.
+- LLM은 근거 문서 번호를 표시하고, 실제 출처 목록은 코드가 생성합니다.
+- 정책 답변은 참고용이며 최종 판단은 원문 공고를 기준으로 합니다.
+
+## 인덱스 정책
+
+`build-index`는 전체 재구축 명령입니다. 기존 Chroma 컬렉션을 삭제한 뒤 문서 해시 기반 ID로 다시 생성하므로 반복 실행 시 동일 청크가 누적되지 않습니다.
+
+## 확장 포인트
+
+- Chroma 네이티브 사전 필터에 적합한 정규화 메타데이터
+- Cross-encoder 리랭커
+- 수집 스케줄과 문서 변경 감지
+- 정답 데이터셋 기반 검색·생성 평가
