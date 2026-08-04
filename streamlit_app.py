@@ -154,19 +154,27 @@ def _load_base_docs(vectorstore) -> list[Document]:
     ]
 
 
+@st.cache_resource(show_spinner=False)
+def _load_retriever() -> HybridRetriever:
+    builder = IndexBuilder()
+    vectorstore = builder.load_vectorstore()
+    docs = _load_base_docs(vectorstore)
+    return HybridRetriever(vectorstore=vectorstore, base_docs=docs)
+
+
 with st.sidebar:
     st.header("파이프라인 실행")
 
     st.markdown("---")
     st.subheader("검색 필터")
-    selected_region = st.selectbox("지역", ["전체", "서울", "경기", "인천", "부산", "대구", "광주", "대전", "울산", "세종"])
+    selected_region = st.selectbox("지역", ["전체", "서울", "경기", "인천", "부산", "대구", "광주", "대전", "울산", "세종", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"])
     selected_org = st.selectbox(
         "기관",
         [
             "전체",
             "창업진흥원",
             "중소벤처기업부",
-            "소상공인시장진흥공단",
+            "중소벤처기업진흥공단",
             "경기테크노파크",
             "울산과학기술원",
             "경기콘텐츠진흥원",
@@ -210,6 +218,7 @@ with st.sidebar:
         try:
             builder = IndexBuilder()
             chunk_count, preview_path = builder.build()
+            _load_retriever.clear()
             st.success(f"인덱스 생성 완료: {chunk_count} chunks")
             st.write(preview_path)
         except Exception as exc:
@@ -234,11 +243,7 @@ if st.button("질문 실행", type="primary"):
         st.warning("질문을 입력해주세요.")
     else:
         try:
-            builder = IndexBuilder()
-            vectorstore = builder.load_vectorstore()
-            docs = _load_base_docs(vectorstore)
-
-            retriever = HybridRetriever(vectorstore=vectorstore, base_docs=docs)
+            retriever = _load_retriever()
             retrieval_result = retriever.retrieve(
                 question,
                 structured_filters={
@@ -253,7 +258,7 @@ if st.button("질문 실행", type="primary"):
                 top_n=settings.rerank_top_n,
                 threshold=settings.rerank_threshold,
             )
-            final_docs = reranked_docs if rerank_ok else retrieval_result.documents
+            final_docs = reranked_docs if rerank_ok else []
             answer = answer_with_citations(question, final_docs)
 
             if not final_docs:
@@ -287,6 +292,8 @@ if st.button("질문 실행", type="primary"):
             for idx, doc in enumerate(final_docs[:6], start=1):
                 meta = doc.metadata
                 source_file = meta.get("source_file", "unknown")
+                title = meta.get("title", "")
+                source_kind = meta.get("source_kind", "pdf")
                 source_url = meta.get("source_url", "")
                 notice_id = meta.get("notice_id", "")
                 page_number = meta.get("page_number", "?")
@@ -295,7 +302,10 @@ if st.button("질문 실행", type="primary"):
                 support_type = meta.get("support_type", "")
                 region = meta.get("region", "")
 
-                line = f"{idx}. {source_file} p.{page_number}"
+                if source_kind == "web" or source_url:
+                    line = f"{idx}. {title or source_file}"
+                else:
+                    line = f"{idx}. {source_file} p.{page_number}"
                 if notice_id:
                     line += f" | notice_id={notice_id}"
                 if organization:

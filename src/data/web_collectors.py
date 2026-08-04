@@ -98,7 +98,7 @@ def _extract_notice_fields(text: str) -> dict:
             deadline = m_deadline.group(1)
         break
 
-    m_org = re.search(r"\b(창업진흥원|소상공인시장진흥공단|중소벤처기업부|경기테크노파크|울산과학기술원|경기콘텐츠진흥원)\b", text)
+    m_org = re.search(r"\b(창업진흥원|중소벤처기업진흥공단|중소벤처기업부|경기테크노파크|울산과학기술원|경기콘텐츠진흥원)\b", text)
     if m_org:
         organization = m_org.group(1)
 
